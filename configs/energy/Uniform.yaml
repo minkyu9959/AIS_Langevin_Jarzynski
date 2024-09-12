@@ -1,0 +1,25 @@
+# @package _global_
+
+device: cuda
+
+energy:
+  _target_: energy.simple_energy.UniformEnergy
+  dim: 2
+  max_support: 10.0 
+
+eval:
+  plot:
+    plotting_bounds: [-10.0, 10.0]
+    fig_size: [12, 12]
+
+  eval_data_size: 10000
+  final_eval_data_size: 10000
+  plot_sample_size: 10000
+
+model:
+  prior_energy:
+    _target_: energy.simple_energy.UniformEnergy
+    dim: 2
+    max_support: 10.0
+
+

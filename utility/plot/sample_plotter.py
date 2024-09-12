@@ -256,3 +256,8 @@ class SamplePlotter:
         draw_energy_histogram(ax, log_reward, name)
 
         return fig, ax
+
+    # def make_histogram_plot(self, data, bins=50, range=(-5, 5)):
+    #     fig, ax = plt.subplots(figsize=self.fig_size)
+    #     ax.hist(data, bins=bins, range=range)
+    #     return fig, ax

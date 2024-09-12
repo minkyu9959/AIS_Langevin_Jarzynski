@@ -137,7 +137,11 @@ def one_step_langevin_dynamic(x, log_reward, step_size, do_correct=False):
         accept_mask = correction_step(
             x, log_r_old, r_grad_old, new_x, log_r_new, r_grad_new, step_size
         )
-        x[accept_mask] = new_x[accept_mask]
+        x_c = x.clone()  # x를 복제하여 x_c에 할당
+        x_c[accept_mask] = new_x[accept_mask]
+        x = x_c  # x_c를 x에 다시 할당
+        
+        #x[accept_mask] = new_x[accept_mask]
     else:
         x = new_x
 
