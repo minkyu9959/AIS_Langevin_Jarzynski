@@ -17,7 +17,7 @@ class NeptuneLogger(Logger):
         self.detail_log = debug
 
         self.run = neptune.init_run(
-            project="dywoo1247/Diffusion-sampler",
+            project="minkyu9959/CMCD",
             tags=make_tag(cfg),
             dependencies="infer",
             name=cfg.get("name"),

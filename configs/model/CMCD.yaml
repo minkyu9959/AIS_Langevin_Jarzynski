@@ -9,15 +9,24 @@ defaults:
 
   - prior_energy: Gaussian
 
+state_encoder: #Minkyu
+  s_dim: ${energy.dim} #Minkyu
+  s_emb_dim: 256 #Minkyu
+
+time_encoder: #Minkyu
+  t_emb_dim: 256 #Minkyu
+  harmonics_dim: ${.t_emb_dim} #Minkyu
+
 control_model:
   s_dim: ${energy.dim}
+  s_emb_dim: ${model.state_encoder.s_emb_dim} #Minkyu
+  t_dim: ${model.time_encoder.t_emb_dim} #Minkyu
+  hidden_dim: 256 #Minkyu
+  num_layers: 2 #Minkyu
 
-state_encoder:
-  s_dim: ${energy.dim}
+trajectory_length: 512
 
-trajectory_length: 100
-
-base_diffusion_rate: 1.0
+base_diffusion_rate: 0.5 #Minkyu
 
 clipping: true
 lgv_clip: 1e2
@@ -28,3 +37,4 @@ optimizer_cfg:
   lr_flow: 1e-1
   weight_decay: 1e-7
   use_weight_decay: false
+

@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import random
 
 
 def adjust_ld_step(
@@ -99,11 +100,24 @@ def get_reward_and_gradient(x, log_reward):
 
 
 def langevin_proposal(x, log_r_grad, step_size):
+    
+    # seed = 12345
+    # torch.manual_seed(seed)
+    # torch.cuda.manual_seed(seed)
+    # torch.cuda.manual_seed_all(seed)
+    # random.seed(seed)
+    # torch.backends.cudnn.deterministic = True
+    # torch.backends.cudnn.benchmark = False
+    # np.random.seed(seed)
+    
+    sigma = 2.0 #Minkyu
+    dt = step_size #Minkyu
+    
     return (
         x
-        + step_size * log_r_grad.detach()
-        + np.sqrt(2 * step_size) * torch.randn_like(x, device=x.device)
-    ).detach()
+        + sigma**2 * log_r_grad.detach() * dt
+        + sigma * np.sqrt(2 * step_size) * torch.randn_like(x, device=x.device)
+    ).detach() #Minkyu
 
 
 def correction_step(
@@ -137,9 +151,9 @@ def one_step_langevin_dynamic(x, log_reward, step_size, do_correct=False):
         accept_mask = correction_step(
             x, log_r_old, r_grad_old, new_x, log_r_new, r_grad_new, step_size
         )
-        x_c = x.clone()  # x를 복제하여 x_c에 할당
-        x_c[accept_mask] = new_x[accept_mask]
-        x = x_c  # x_c를 x에 다시 할당
+        x_c = x.clone()  #Minkyu
+        x_c[accept_mask] = new_x[accept_mask] #Minkyu
+        x = x_c  #Minkyu
         
         #x[accept_mask] = new_x[accept_mask]
     else:

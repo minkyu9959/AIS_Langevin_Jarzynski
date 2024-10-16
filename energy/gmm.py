@@ -99,5 +99,21 @@ class GMM25(GaussianMixture):
         )
 
 
-class GMM40(GaussianMixture):
-    pass
+class GMM40(GaussianMixture): #Minkyu
+    def __init__(self, device: str, dim: int, scale: float = 0.25):
+  
+        mode_list = torch.tensor(
+            [
+                (a, b)
+                for a in [-7.0, -5.0, -3.0, -1.0, 1.0, 3.0, 5.0, 7.0]
+                for b in [-7.0, -3.5, 0.0, 3.5, 7.0]
+            ],
+            device=device,
+        )
+
+        super().__init__(
+            device=device,
+            mode_list=mode_list,
+            dim=dim,
+            scale=scale,
+        )

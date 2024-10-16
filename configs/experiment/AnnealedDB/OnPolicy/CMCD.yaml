@@ -9,7 +9,7 @@ train:
 
   exploratory: false
 
-  epochs: 10000
+  epochs: 4000 #Minkyu
 
 model:
   optimizer_cfg:

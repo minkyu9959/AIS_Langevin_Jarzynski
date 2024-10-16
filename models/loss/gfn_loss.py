@@ -40,7 +40,7 @@ def vargrad_loss(
     log_reward: Tensor,
 ):
     # Estimate log Z with batch average.
-    log_Z = (log_reward + log_pbs.sum(-1) - log_pfs.sum(-1)).mean(dim=0, keepdim=True)
+    log_Z = (log_reward + log_pbs.sum(-1) - log_pfs.sum(-1) - log_prior).mean(dim=0, keepdim=True) #Minkyu
     loss = log_Z + (log_prior + log_pfs.sum(-1) - log_reward - log_pbs.sum(-1))
     return 0.5 * (loss**2).mean()
 
