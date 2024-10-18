@@ -18,8 +18,8 @@ from energy import (
     get_energy_function,
     GaussianEnergy,
 )
+from energy.neural_energy import NeuralEnergy
 from utility import SamplePlotter
-from energy.annealed_energy import NeuralEnergy
 
 import wandb
 from datetime import datetime
@@ -32,19 +32,20 @@ def annealed_IS_with_langevin(prior: BaseEnergy, target: BaseEnergy, cfg: DictCo
     num_time_steps = cfg.num_time_steps
     num_samples = cfg.num_samples
     num_epochs = 10000 #Minkyu
-    lr = 1e-5 #Minkyu
+    ne_lr = 1e-4 #Minkyu
     max_norm = 2.0 #Minkyu
     
     input_dim = cfg.energy["dim"] #Minkyu
     neural_energy = NeuralEnergy(input_dim).to(device) #Minkyu
+    
     ELBO_est_param = torch.nn.Parameter(torch.tensor(100.0, device=device)) #Minkyu
     
     annealed_densities = AnnealedDensities(target, prior, neural_energy) # (1-t)*E_0(x) + t*E_T(x) + t*(1-t)*NN(x)
     
     optimizer = torch.optim.Adam(
             [
-                {"params": ELBO_est_param, "lr": 1e-2},
-                {"params": neural_energy.parameters(), "lr": lr, "weight_decay": 1e-4},
+                {"params": ELBO_est_param, "lr": 1e-3},
+                {"params": neural_energy.parameters(), "lr": ne_lr},
             ]
         ) #Minkyu
     
@@ -88,20 +89,12 @@ def annealed_IS_with_langevin(prior: BaseEnergy, target: BaseEnergy, cfg: DictCo
         unbiased_est = torch.logsumexp(log_weights, dim=0) - torch.log(torch.tensor(num_samples)) #Minkyu
         
         # Train
-        # ELBO_est = (log_weights).mean()
+        ELBO_est = (log_weights).mean()
         loss = (ELBO_est_param - log_weights).square().mean() # Var[log_weights] #Minkyu
-        
-        # l2_regularization = 0.0
-        # for param in neural_energy.parameters():
-        #     l2_regularization += torch.norm(param, 2)  # L2 reg
-
-        # # Add the L2 regularization to the loss (scaled by a regularization factor)
-        # reg_weight = 0.1  # Adjust as necessary
-        # reg_loss = loss + reg_weight * l2_regularization
         
         loss.backward() #Minkyu
         
-        torch.nn.utils.clip_grad_norm_(neural_energy.parameters(), max_norm) #Minkyu
+        # torch.nn.utils.clip_grad_norm_(neural_energy.parameters(), max_norm) #Minkyu
          
         total_norm = 0 #Minkyu
         for p in neural_energy.parameters():
@@ -119,7 +112,6 @@ def annealed_IS_with_langevin(prior: BaseEnergy, target: BaseEnergy, cfg: DictCo
             "ELBO": log_weights.mean().item(),
             "ELBO_estimation": ELBO_est_param.item(), 
             "Loss": loss.item(),
-            # "L2 Regularization": l2_regularization.item(),
             "Gradient Norm": total_norm,
         }) #Minkyu
         
@@ -133,7 +125,7 @@ def annealed_IS_with_langevin(prior: BaseEnergy, target: BaseEnergy, cfg: DictCo
             os.makedirs(output_dir_energy, exist_ok=True)
             os.makedirs(output_dir_weights, exist_ok=True)
         
-            config_postfix = f"A={num_time_steps}, max_norm={max_norm}, lr={lr} ({step} per {num_epochs})"
+            config_postfix = f"A={num_time_steps}, lr={ne_lr} ({step} per {num_epochs})"
 
             fig, ax = plotter.make_sample_plot(sample)
             fig.savefig(

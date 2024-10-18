@@ -23,6 +23,7 @@ class CMCDSampler(SamplerModel):
         state_encoder: nn.Module,
         time_encoder: nn.Module,
         control_model: nn.Module,
+        neural_energy: nn.Module,   
         base_diffusion_rate: float = 1.0,
         clipping: bool = False,
         lgv_clip: float = 1e2,
@@ -38,13 +39,14 @@ class CMCDSampler(SamplerModel):
         )
 
         self.annealed_energy = AnnealedDensities(
-            energy_function=energy_function, prior_energy=prior_energy
+            energy_function=energy_function, prior_energy=prior_energy,
+            neural_energy=neural_energy, #Chaehyeon
         )
 
         self.state_encoder = state_encoder
         self.time_encoder = time_encoder
-
         self.control_model = control_model
+        self.neural_energy = neural_energy
 
         self.forward_conditional = ControlledMCConditional(
             dt=self.dt,
@@ -89,6 +91,7 @@ class CMCDSampler(SamplerModel):
             {"params": self.time_encoder.parameters()},
             {"params": self.state_encoder.parameters()},
             {"params": self.control_model.parameters()},
+            {"params": self.neural_energy.parameters(), "lr": 1e-4}, #Minkyu
         ]
 
         param_groups += [{"params": self.logZ_ratio, "lr": optimizer_cfg.lr_flow}]

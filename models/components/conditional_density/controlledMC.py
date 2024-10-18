@@ -66,9 +66,9 @@ class ControlledMCConditional(ConditionalDensity):
         mean_and_logvar, annealed_score = self.get_score_and_control(state, time)
 
         if self.do_control_plus_score:
-            mean_and_logvar[..., : self.sample_dim] += self.base_std**2 * annealed_score
+            mean_and_logvar[..., : self.sample_dim] += ((self.base_std**2) / 2) * annealed_score
         else:
-            mean_and_logvar[..., : self.sample_dim] -= self.base_std**2 * annealed_score
+            mean_and_logvar[..., : self.sample_dim] = ((self.base_std**2) / 2) * annealed_score - mean_and_logvar[..., : self.sample_dim]
 
         if self.clipping:
             mean_and_logvar = torch.clip(mean_and_logvar, -self.gfn_clip, self.gfn_clip)

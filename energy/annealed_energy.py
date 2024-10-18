@@ -4,39 +4,7 @@ import torch
 import numpy as np
 
 from .base_energy import BaseEnergy
-
-class NeuralEnergy(torch.nn.Module): #Minkyu
-    def __init__(self, input_dim, hidden_dim=64, num_hidden_layers=2):
-        super(NeuralEnergy, self).__init__()
-        self.input_dim = input_dim
-        self.hidden_dim = hidden_dim
-        self.num_hidden_layers = num_hidden_layers
-
-        # Define the layers
-        layers = [torch.nn.Linear(input_dim, hidden_dim), torch.nn.ReLU()]
-
-        # Hidden layers
-        for _ in range(num_hidden_layers - 1):
-            layers.append(torch.nn.Linear(hidden_dim, hidden_dim))
-            layers.append(torch.nn.ReLU())
-
-        # Output layer: energy is a scalar
-        layers.append(torch.nn.Linear(hidden_dim, 1))
-
-        self.model = torch.nn.Sequential(*layers)
-        
-        self._initialize_bias()
-        
-    def _initialize_bias(self):
-        for layer in self.model:
-            if isinstance(layer, torch.nn.Linear):
-                # torch.nn.init.kaiming_uniform_(layer.weight, nonlinearity='relu')
-                torch.nn.init.zeros_(layer.bias)
-
-    def forward(self, x):
-        
-        energy = self.model(x)
-        return energy.squeeze()
+from .neural_energy import NeuralEnergy
     
 class AnnealedDensities:
     def __init__(
@@ -55,7 +23,7 @@ class AnnealedDensities:
 
         prior_energy = self.prior_energy.energy(states)
         energy = self.energy_function.energy(states)
-        neural_energy = self.neural_energy(states) #Minkyu
+        neural_energy = self.neural_energy(states, times) #Minkyu
 
         return (1 - times) * prior_energy + times * energy + times * (1 - times) * neural_energy #Minkyu
 
@@ -63,8 +31,9 @@ class AnnealedDensities:
 
         prior_score = self.prior_energy.score(states)
         target_score = self.energy_function.score(states)
+        neural_score = self.neural_energy.score(states, times)
 
-        return (1 - times) * prior_score + times * target_score
+        return (1 - times) * prior_score + times * target_score + times * (1 - times) * neural_score #Minkyu    
 
     @cache
     @torch.no_grad()

@@ -5,6 +5,7 @@ from .gmm import GaussianMixture, GMM9, GMM25, GMM40
 
 from .annealed_energy import AnnealedEnergy, AnnealedDensities
 from .simple_energy import GaussianEnergy, UniformEnergy, DiracDeltaEnergy
+from .neural_energy import NeuralEnergy #Chaehyeon
 
 from hydra.utils import instantiate
 from omegaconf import DictConfig

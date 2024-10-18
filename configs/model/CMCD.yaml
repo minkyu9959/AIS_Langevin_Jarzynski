@@ -24,9 +24,12 @@ control_model:
   hidden_dim: 256 #Minkyu
   num_layers: 2 #Minkyu
 
-trajectory_length: 512
+neural_energy:  #Chaehyeon  
+  input_dim: ${energy.dim}  #Chaehyeon
 
-base_diffusion_rate: 0.5 #Minkyu
+trajectory_length: 256
+
+base_diffusion_rate: 1.0 #Minkyu
 
 clipping: true
 lgv_clip: 1e2

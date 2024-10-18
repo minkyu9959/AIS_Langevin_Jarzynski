@@ -125,7 +125,6 @@ class StateEncoding(nn.Module):
     def forward(self, s):
         return self.x_model(s)
 
-
 class JointPolicy(nn.Module):
     def __init__(
         self,
