@@ -46,7 +46,7 @@ class StateEncoding(nn.Module):
         return self.x_model(s)
 
 class NeuralEnergy(nn.Module): # Feedback
-    def __init__(self, s_dim: int, harmonics_dim: int = 64, t_emb_dim: int = 64, hidden_dim: int = 64, s_emb_dim: int = 64, mlp_hidden_dim: int = 128):
+    def __init__(self, s_dim: int, harmonics_dim: int = 256, t_emb_dim: int = 256, hidden_dim: int = 256, s_emb_dim: int = 256, mlp_hidden_dim: int = 256):
         super(NeuralEnergy, self).__init__()
         
         self.state_encoder = StateEncoding(s_dim, hidden_dim, s_emb_dim)

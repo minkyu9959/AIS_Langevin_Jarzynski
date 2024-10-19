@@ -40,7 +40,7 @@ class CMCDSampler(SamplerModel):
 
         self.annealed_energy = AnnealedDensities(
             energy_function=energy_function, prior_energy=prior_energy,
-            neural_energy=neural_energy, #Chaehyeon
+            neural_energy=neural_energy, #Minkyu
         )
 
         self.state_encoder = state_encoder

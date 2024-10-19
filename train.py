@@ -8,7 +8,7 @@ from hydra.utils import instantiate
 
 from omegaconf import DictConfig
 
-from energy import BaseEnergy, get_energy_function, NeuralEnergy #Chaehyeon
+from energy import BaseEnergy, get_energy_function, NeuralEnergy #Minkyu
 from models import get_model
 
 from trainer import BaseTrainer
@@ -46,7 +46,6 @@ def main(cfg: DictConfig) -> None:
 
     energy_function: BaseEnergy = get_energy_function(cfg)
 
-    #Chaehyeon (Neural Energy 인스턴스 생성)
     neural_energy: NeuralEnergy = NeuralEnergy(input_dim=cfg.model.neural_energy.input_dim)   
 
     model: torch.nn.Module = get_model(cfg, energy_function, neural_energy).to(cfg.device)

@@ -31,8 +31,7 @@ def annealed_IS_with_langevin(prior: BaseEnergy, target: BaseEnergy, cfg: DictCo
     device = cfg.device
     num_time_steps = cfg.num_time_steps
     num_samples = cfg.num_samples
-    num_epochs = 10000 #Minkyu
-    ne_lr = 1e-4 #Minkyu
+    num_epochs = 20000 #Minkyu
     max_norm = 2.0 #Minkyu
     
     input_dim = cfg.energy["dim"] #Minkyu
@@ -44,8 +43,8 @@ def annealed_IS_with_langevin(prior: BaseEnergy, target: BaseEnergy, cfg: DictCo
     
     optimizer = torch.optim.Adam(
             [
-                {"params": ELBO_est_param, "lr": 1e-3},
-                {"params": neural_energy.parameters(), "lr": ne_lr},
+                # {"params": ELBO_est_param, "lr": 1e-3},
+                {"params": neural_energy.parameters(), "lr": 1e-2},
             ]
         ) #Minkyu
     
@@ -90,7 +89,7 @@ def annealed_IS_with_langevin(prior: BaseEnergy, target: BaseEnergy, cfg: DictCo
         
         # Train
         ELBO_est = (log_weights).mean()
-        loss = (ELBO_est_param - log_weights).square().mean() # Var[log_weights] #Minkyu
+        loss = (ELBO_est - log_weights).square().mean() # Var[log_weights] #Minkyu
         
         loss.backward() #Minkyu
         
@@ -125,7 +124,7 @@ def annealed_IS_with_langevin(prior: BaseEnergy, target: BaseEnergy, cfg: DictCo
             os.makedirs(output_dir_energy, exist_ok=True)
             os.makedirs(output_dir_weights, exist_ok=True)
         
-            config_postfix = f"A={num_time_steps}, lr={ne_lr} ({step} per {num_epochs})"
+            config_postfix = f"({step} per {num_epochs})"
 
             fig, ax = plotter.make_sample_plot(sample)
             fig.savefig(
