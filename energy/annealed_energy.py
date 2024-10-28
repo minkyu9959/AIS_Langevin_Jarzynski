@@ -4,28 +4,23 @@ import torch
 import numpy as np
 
 from .base_energy import BaseEnergy
-from .neural_energy import NeuralEnergy
     
 class AnnealedDensities:
     def __init__(
         self,
         energy_function: BaseEnergy,
-        prior_energy: BaseEnergy,
-        neural_energy: NeuralEnergy, 
-        
+        prior_energy: BaseEnergy, 
     ):
         self.energy_function = energy_function
         self.device = energy_function.device
         self.prior_energy = prior_energy
-        self.neural_energy = neural_energy #Minkyu
 
     def energy(self, times: torch.Tensor, states: torch.Tensor):
 
         prior_energy = self.prior_energy.energy(states)
         energy = self.energy_function.energy(states)
-        neural_energy = self.neural_energy(states, times) #Minkyu
 
-        return (1 - times) * prior_energy + times * energy + times * (1 - times) * neural_energy #Minkyu
+        return (1 - times) * prior_energy + times * energy
 
     def score(self, times: torch.Tensor, states: torch.Tensor):
 
@@ -123,13 +118,14 @@ class AnnealedEnergy(BaseEnergy):
 
     def __init__(self, density_family: AnnealedDensities, time: float):
         target_energy = density_family.energy_function
+
         super().__init__(target_energy.device, target_energy.ndim)
 
         self.annealed_targets = density_family
         self._time = time
 
     def energy(self, states: torch.Tensor):
-        return self.annealed_targets.energy(self._time, states)
+        return self.annealed_targets.energy(self._time, states) 
 
     def score(self, states: torch.Tensor):
         return self.annealed_targets.score(self._time, states)

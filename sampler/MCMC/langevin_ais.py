@@ -18,7 +18,7 @@ from energy import (
     get_energy_function,
     GaussianEnergy,
 )
-from energy.neural_energy import NeuralEnergy
+from energy.neural_drift import NeuralDrift
 from utility import SamplePlotter
 
 import wandb
@@ -29,22 +29,23 @@ from datetime import datetime
 def annealed_IS_with_langevin(prior: BaseEnergy, target: BaseEnergy, cfg: DictConfig):
     
     device = cfg.device
-    num_time_steps = cfg.num_time_steps
+    annealing_steps = cfg.num_time_steps
     num_samples = cfg.num_samples
     num_epochs = 20000 #Minkyu
-    max_norm = 2.0 #Minkyu
+    max_norm = 30.0 #Minkyu
     
     input_dim = cfg.energy["dim"] #Minkyu
-    neural_energy = NeuralEnergy(input_dim).to(device) #Minkyu
+    sigma = 2.0 #Minkyu
+    neural_drift = NeuralDrift(input_dim).to(device) #Minkyu
     
-    ELBO_est_param = torch.nn.Parameter(torch.tensor(100.0, device=device)) #Minkyu
+    TB_param = torch.nn.Parameter(torch.tensor(100.0, device=device)) #Minkyu
     
-    annealed_densities = AnnealedDensities(target, prior, neural_energy) # (1-t)*E_0(x) + t*E_T(x) + t*(1-t)*NN(x)
+    annealed_densities = AnnealedDensities(target, prior) # (1-t)*E_0(x) + t*E_T(x)
     
     optimizer = torch.optim.Adam(
             [
-                # {"params": ELBO_est_param, "lr": 1e-3},
-                {"params": neural_energy.parameters(), "lr": 1e-2},
+                {"params": TB_param, "lr": 1e-2},
+                {"params": neural_drift.parameters(), "lr": 1e-3},
             ]
         ) #Minkyu
     
@@ -59,7 +60,6 @@ def annealed_IS_with_langevin(prior: BaseEnergy, target: BaseEnergy, cfg: DictCo
     wandb.init(project="annealed_IS_with_langevin", config=wandb_config) #Minkyu
     
     F_gap = target.ground_truth_logZ - prior.ground_truth_logZ #Minkyu
-    
 
     for step in tqdm(range(num_epochs)): #Minkyu
         
@@ -67,38 +67,48 @@ def annealed_IS_with_langevin(prior: BaseEnergy, target: BaseEnergy, cfg: DictCo
         sample = prior.sample(num_samples, device)
         
         # Annealed importance weight
-        log_weights = torch.zeros(num_samples, device=device) #Minkyu
+        radon_nikodym = torch.zeros(num_samples, device=device) #Minkyu
+        log_p_X = prior.log_reward(sample) - prior.ground_truth_logZ #Fix_backwards #P(X_0)
 
-        for t in torch.linspace(0, 1, num_time_steps)[1:]:
+        for t in torch.linspace(0, 1, annealing_steps)[1:]:
             
-            dt = 1/(num_time_steps - 1) #Minkyu
-            prev_t = t - dt #Minkyu
+            dt = 1/(annealing_steps - 1) #Minkyu
             
-            annealed_energy = AnnealedEnergy(annealed_densities, t) 
-            prev_annealed_energy = AnnealedEnergy(annealed_densities, prev_t) #Minkyu
+            annealed_energy = AnnealedEnergy(annealed_densities, t)
             
             # Sample update : x_t => x_{t+1}
-            sample = one_step_langevin_dynamic(
-                sample, annealed_energy.log_reward, cfg.ld_step, do_correct=True
+            sample, log_transition_prob = one_step_langevin_dynamic(
+                neural_drift, sample, t, annealed_energy.log_reward, cfg.ld_step, sigma, do_correct=True
+            )
+        
+            infinitesimal_work = ( #Minkyu
+                prior.energy(sample) - target.energy(sample) + (neural_drift(sample, t)**2).sum(dim=-1) 
             )
             
-            log_weights = log_weights + (annealed_energy.log_reward(sample) - prev_annealed_energy.log_reward(sample)) #Minkyu
-
+            radon_nikodym = radon_nikodym + infinitesimal_work * dt #Jarzynski work integration
+            log_p_X = log_p_X + log_transition_prob #Fix_backwards #P(X_0) * P(X_1|X_0) * ... * P(X_T|X_{T-1})
+            
         # Jarzynski estimation
-        unbiased_est = torch.logsumexp(log_weights, dim=0) - torch.log(torch.tensor(num_samples)) #Minkyu
+        # unbiased_est = torch.logsumexp(work, dim=0) - torch.log(torch.tensor(num_samples)) #Minkyu
         
-        # Train
-        ELBO_est = (log_weights).mean()
-        loss = (ELBO_est - log_weights).square().mean() # Var[log_weights] #Minkyu
+        # Train 
+        E_radon_nikodym = radon_nikodym.mean()
+        radon_nikodym_detached = radon_nikodym.detach().clone()
+        E_reinforce_term = (radon_nikodym_detached * log_p_X).mean()
         
+        # Compute the overall loss
+        loss = -(E_radon_nikodym + E_reinforce_term) #-ELBO with reinforce trick
+        # loss = (radon_nikodym - TB_param).square().mean() #Average learning TB loss with scalar parameter
+        # loss = (radon_nikodym - 135).square().mean() #TB with constant
+        # loss = (radon_nikodym - radon_nikodym.mean()).square().mean() #VarGrad MC estimation
         loss.backward() #Minkyu
         
-        # torch.nn.utils.clip_grad_norm_(neural_energy.parameters(), max_norm) #Minkyu
-         
+        torch.nn.utils.clip_grad_norm_(neural_drift.parameters(), max_norm) #Minkyu
+        
         total_norm = 0 #Minkyu
-        for p in neural_energy.parameters():
+        for p in neural_drift.parameters():
             if p.grad is not None:
-                param_norm = p.grad.detach().data.norm(2)
+                param_norm = p.grad.data.norm(2)
                 total_norm += param_norm.item() ** 2
         total_norm = total_norm ** 0.5 #Minkyu
         
@@ -107,9 +117,9 @@ def annealed_IS_with_langevin(prior: BaseEnergy, target: BaseEnergy, cfg: DictCo
          
         # Wandb logging
         wandb.log({
-            "Unbiased estimation": unbiased_est.item(),
-            "ELBO": log_weights.mean().item(),
-            "ELBO_estimation": ELBO_est_param.item(), 
+            # "Unbiased estimation": (unbiased_est + prior.ground_truth_logZ).item(),
+            "ELBO": (radon_nikodym.mean() + prior.ground_truth_logZ).item(),
+            "TB_param": TB_param.item(), 
             "Loss": loss.item(),
             "Gradient Norm": total_norm,
         }) #Minkyu
@@ -140,15 +150,12 @@ if __name__ == "__main__":
 
     parser.add_argument("-N", "--num_sample", type=int, required=True)
     parser.add_argument("-A", "--annealing_step", type=int, required=True)
-    parser.add_argument("-T", "--MCMC_step", type=int, required=True)
     args = parser.parse_args()
 
     cfg = DictConfig(
         {
             "num_samples": args.num_sample,
             "num_time_steps": args.annealing_step,
-            "max_iter_ls": args.MCMC_step,
-            "burn_in": args.MCMC_step - 100,
             "ld_schedule": True,
             "ld_step": 0.01,
             "target_acceptance_rate": 0.574,
@@ -189,11 +196,11 @@ if __name__ == "__main__":
         bbox_inches="tight",
     )
 
-    # fig, ax = plotter.make_energy_histogram(sample)
-    # fig.savefig(
-    #     f"results/figure/AIS-Langevin/energy-{config_postfix}.pdf",
-    #     bbox_inches="tight",
-    # )
+    fig, ax = plotter.make_energy_histogram(sample)
+    fig.savefig(
+        f"results/figure/AIS-Langevin/energy-{config_postfix}.pdf",
+        bbox_inches="tight",
+    )
 
     # Print mean of importance weights ~ log(Z_T/Z_0)
     print(f"Free energy estimation by AIS: {unbiased_est.item()}") # Discrete unbiased estimation

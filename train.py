@@ -44,9 +44,8 @@ def main(cfg: DictConfig) -> None:
 
     set_seed(cfg.seed)
 
-    energy_function: BaseEnergy = get_energy_function(cfg)
-
-    neural_energy: NeuralEnergy = NeuralEnergy(input_dim=cfg.model.neural_energy.input_dim)   
+    energy_function: BaseEnergy = get_energy_function(cfg)  
+    neural_energy: NeuralEnergy = NeuralEnergy(s_dim=cfg.model.neural_energy.input_dim)
 
     model: torch.nn.Module = get_model(cfg, energy_function, neural_energy).to(cfg.device)
 

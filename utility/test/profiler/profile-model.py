@@ -12,14 +12,16 @@ from energy import BaseEnergy, get_energy_function
 DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
 
 
-@hydra.main(version_base="1.3", config_path="../configs", config_name="profile.yaml")
+@hydra.main(
+    version_base="1.3", config_path="../../../configs", config_name="profile.yaml"
+)
 def profile(cfg: DictConfig) -> None:
     if cfg.name is None:
         raise Exception("You should specify the model")
 
     set_seed(cfg.seed)
 
-    energy_function: BaseEnergy = get_energy_function(cfg)
+    energy_function: BaseEnergy = get_energy_function(cfg.energy, device=cfg.device)
 
     if cfg.name == "Sampler":
         model: SamplerModel = get_model(cfg, energy_function).to(cfg.device)
@@ -31,9 +33,9 @@ def profile(cfg: DictConfig) -> None:
             harmonics_dim=64,
             t_dim=64,
             energy_function=energy_function,
-            langevin=True,
+            langevin=False,
             pis_architectures=False,
-            learn_pb=True,
+            learn_pb=False,
             zero_init=False,
             clipping=True,
             device=DEVICE,

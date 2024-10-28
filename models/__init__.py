@@ -14,14 +14,12 @@ from hydra.utils import instantiate
 from omegaconf import DictConfig
 
 from energy import BaseEnergy
-from energy import NeuralEnergy #Minkyu
 
-def get_model(cfg: DictConfig, energy_function: BaseEnergy, neural_energy: NeuralEnergy) -> SamplerModel:
+def get_model(cfg: DictConfig, energy_function: BaseEnergy) -> SamplerModel:
     model = instantiate(
         cfg.model,
         device=torch.device(cfg.device),
         energy_function=energy_function,
-        neural_energy=neural_energy, #Minkyu
     )
 
     return model

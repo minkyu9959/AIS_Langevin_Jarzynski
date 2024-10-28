@@ -1,39 +1,9 @@
-from hydra import compose, initialize
-
 import torch
 
-from typing import Optional
-
-from train import set_seed
 from models import *
 from energy import *
 
-
-def load_energy_model_and_config(
-    energy_name: str = "GMM25",
-    model_name: str = "GFN-PIS",
-    overrides: Optional[list] = None,
-):
-    if overrides is None:
-        overrides = []
-
-    with initialize(config_path="../configs", version_base="1.3"):
-        cfg = compose(
-            config_name="test.yaml",
-            overrides=[
-                f"energy={energy_name}",
-                f"model={model_name}",
-                *overrides,
-            ],
-        )
-
-    set_seed(cfg.seed)
-
-    energy = get_energy_function(cfg)
-
-    model = get_model(cfg, energy).to(cfg.device)
-
-    return energy, model, cfg
+from utility.loader import load_energy_model_and_config
 
 
 def test_stochastic_backprop():

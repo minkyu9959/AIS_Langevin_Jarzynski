@@ -5,7 +5,7 @@ from .gmm import GaussianMixture, GMM9, GMM25, GMM40
 
 from .annealed_energy import AnnealedEnergy, AnnealedDensities
 from .simple_energy import GaussianEnergy, UniformEnergy, DiracDeltaEnergy
-from .neural_energy import NeuralEnergy #Minkyu
+from .neural_drift import NeuralDrift #Minkyu
 
 from hydra.utils import instantiate
 from omegaconf import DictConfig

@@ -23,7 +23,7 @@ class CMCDSampler(SamplerModel):
         state_encoder: nn.Module,
         time_encoder: nn.Module,
         control_model: nn.Module,
-        neural_energy: nn.Module,   
+        neural_energy: nn.Module,
         base_diffusion_rate: float = 1.0,
         clipping: bool = False,
         lgv_clip: float = 1e2,
@@ -39,8 +39,7 @@ class CMCDSampler(SamplerModel):
         )
 
         self.annealed_energy = AnnealedDensities(
-            energy_function=energy_function, prior_energy=prior_energy,
-            neural_energy=neural_energy, #Minkyu
+            energy_function=energy_function, prior_energy=prior_energy, neural_energy=neural_energy,
         )
 
         self.state_encoder = state_encoder
