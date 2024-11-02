@@ -1,2 +1,2 @@
-from .logger import Logger, get_logger
+from .logger import Logger
 from .plot import SamplePlotter

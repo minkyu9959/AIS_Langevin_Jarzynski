@@ -26,9 +26,8 @@ class AnnealedDensities:
 
         prior_score = self.prior_energy.score(states)
         target_score = self.energy_function.score(states)
-        neural_score = self.neural_energy.score(states, times)
 
-        return (1 - times) * prior_score + times * target_score + times * (1 - times) * neural_score #Minkyu    
+        return (1 - times) * prior_score + times * target_score + times
 
     @cache
     @torch.no_grad()

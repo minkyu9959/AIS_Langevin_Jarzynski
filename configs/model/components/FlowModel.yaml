@@ -1,9 +1,0 @@
-_target_: models.components.architectures.FlowModel
-
-s_emb_dim: 64
-
-t_dim: 64
-
-hidden_dim: 64
-
-out_dim: 1

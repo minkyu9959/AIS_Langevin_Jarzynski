@@ -1,5 +1,0 @@
-_target_: models.components.architectures.StateEncodingPIS
-
-s_dim: ???
-
-s_emb_dim: 64

@@ -1,7 +1,0 @@
-trainer:
-  _target_: trainer.trajectory_wise_trainer.SampleBasedTrainer
-
-epochs: 25000
-batch_size: 300
-
-bwd_loss: tb

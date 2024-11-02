@@ -1,6 +1,0 @@
-_target_: torch.nn.Parameter
-
-data:
-  _target_: torch.tensor
-  data: 0.0
-  device: ${model.device}

@@ -99,7 +99,7 @@ class GMM25(GaussianMixture):
         )
 
 
-class GMM40(GaussianMixture): #Minkyu
+class GMM40(GaussianMixture):
     def __init__(self, device: str, dim: int, scale: float = 0.25):
   
         mode_list = torch.tensor(

@@ -1,8 +1,0 @@
-
-_target_: energy.simple_energy.UniformEnergy
-
-dim: ${energy.dim}
-
-device: ${device}
-
-max_support: 30

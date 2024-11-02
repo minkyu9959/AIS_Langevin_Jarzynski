@@ -1,8 +1,0 @@
-
-_target_: energy.simple_energy.GaussianEnergy
-
-dim: ${energy.dim}
-
-device: ${device}
-
-std: 1.0

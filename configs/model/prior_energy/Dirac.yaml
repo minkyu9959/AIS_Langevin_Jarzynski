@@ -1,7 +1,0 @@
-
-_target_: energy.simple_energy.DiracDeltaEnergy
-
-dim: ${energy.dim}
-
-device: ${device}
-
