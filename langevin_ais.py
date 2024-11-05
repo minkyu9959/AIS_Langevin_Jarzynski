@@ -51,14 +51,14 @@ def annealed_IS_with_langevin(prior: BaseEnergy, target: BaseEnergy, cfg: DictCo
         ) 
     
     # Wandb setting
-    wandb_config = {
-        "device": str(cfg.device),
-        "num_time_steps": cfg.num_time_steps,
-        "num_samples": cfg.num_samples,
-        "energy_dim": cfg.energy["dim"],
-        "ld_step": cfg.ld_step
-    } 
-    wandb.init(project="annealed_IS_with_langevin", config=wandb_config) 
+    # wandb_config = {
+    #     "device": str(cfg.device),
+    #     "num_time_steps": cfg.num_time_steps,
+    #     "num_samples": cfg.num_samples,
+    #     "energy_dim": cfg.energy["dim"],
+    #     "ld_step": cfg.ld_step
+    # } 
+    # wandb.init(project="annealed_IS_with_langevin", config=wandb_config) 
 
     for step in tqdm(range(num_epochs)): 
         
@@ -67,7 +67,6 @@ def annealed_IS_with_langevin(prior: BaseEnergy, target: BaseEnergy, cfg: DictCo
         
         # Annealed importance weight
         radon_nikodym = torch.zeros(num_samples, device=device)
-        rn_detached = torch.zeros(num_samples, device=device) #Maybe unnecessary
         log_p_X = prior.log_reward(sample) - prior.ground_truth_logZ #Prior(X_0)
         log_weights = prior.log_reward(sample) #Reverse KL in VAE
 
@@ -77,18 +76,20 @@ def annealed_IS_with_langevin(prior: BaseEnergy, target: BaseEnergy, cfg: DictCo
             
             annealed_energy = AnnealedEnergy(annealed_densities, t)
             
+            infinitesimal_work = ( 
+                - prior.energy(sample) + target.energy(sample) + (neural_drift(sample, t)**2).sum(dim=-1) 
+            )
+            
             # Sample update : x_t => x_{t+1}
             sample, log_p_transition_fwd, log_p_transition_bwd, log_importance_weight = one_step_langevin_dynamic(
                 neural_drift, sample, t, annealed_energy.log_reward, cfg.ld_step, sigma, do_correct=True
-            )
- 
-            infinitesimal_work = ( 
-                prior.energy(sample) - target.energy(sample) + (neural_drift(sample, t)**2).sum(dim=-1) 
             )
             
             radon_nikodym = radon_nikodym + infinitesimal_work * dt #Jarzynski work integration
             log_p_X = log_p_X + log_p_transition_fwd #P(X_0) * P(X_1|X_0) * ... * P(X_T|X_{T-1})
             log_weights = log_weights + log_importance_weight #Reverse KL in VAE
+        
+        radon_nikodym = radon_nikodym + (- prior.energy(sample) + target.energy(sample) + (neural_drift(sample, t)**2).sum(dim=-1)) * dt 
         
         log_weights = log_weights - target.log_reward(sample)
         reverse_KL_VAE = log_weights.mean() + target.ground_truth_logZ #Reverse KL in VAE
@@ -97,8 +98,10 @@ def annealed_IS_with_langevin(prior: BaseEnergy, target: BaseEnergy, cfg: DictCo
         
         reverse_KL_Jarzynski = radon_nikodym.mean() + target.ground_truth_logZ - prior.ground_truth_logZ #Reverse KL in Jarzynski
         lower_bound_Jarzynski = -reverse_KL_Jarzynski + target.ground_truth_logZ #ELBO with reparametrization trick (Jarzynski)
-        # lower_bound_Jarzynski = radon_nikodym.mean() + prior.ground_truth_logZ
-            
+        
+        print("Lower Bound (VAE): ", lower_bound_VAE.item())
+        print("Lower Bound (Jarzynski): ", lower_bound_Jarzynski.item())
+        
         # Train 
         
         loss = compute_loss(cfg.loss_type, log_weights=log_weights, radon_nikodym=radon_nikodym, target_log_Z=target.ground_truth_logZ, prior_log_Z=prior.ground_truth_logZ, TB_param=TB_param)
@@ -118,13 +121,13 @@ def annealed_IS_with_langevin(prior: BaseEnergy, target: BaseEnergy, cfg: DictCo
         optimizer.zero_grad() 
         
         # Wandb logging
-        wandb.log({
-            "Lower Bound (VAE)": lower_bound_VAE.item(),
-            "Lower Bound (Jarzynski)": lower_bound_Jarzynski.item(),
-            "TB_param": TB_param.item(), 
-            "Loss": loss.item(),
-            "Gradient Norm": total_norm,
-        }) 
+        # wandb.log({
+        #     "Lower Bound (VAE)": lower_bound_VAE.item(),
+        #     "Lower Bound (Jarzynski)": lower_bound_Jarzynski.item(),
+        #     "TB_param": TB_param.item(), 
+        #     "Loss": loss.item(),
+        #     "Gradient Norm": total_norm,
+        # }) 
         
         if step % 100 == 0:
         
