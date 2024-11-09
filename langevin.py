@@ -1,17 +1,15 @@
 import torch
 import numpy as np
-import random
 
-from energy.neural_drift import NeuralDrift
 from torch.distributions.normal import Normal
 
 @torch.enable_grad()
-def get_reward_and_gradient(x, log_reward):
+def get_gradient(x, log_reward):
     x = x.requires_grad_(True)
     log_r_x = log_reward(x)
     log_r_grad = torch.autograd.grad(log_r_x.sum(), x, create_graph=True)[0]
 
-    return log_r_x, log_r_grad
+    return log_r_grad
 
 def langevin_proposal(neural_drift, x, log_r_grad, step_size, sigma):
     
@@ -57,19 +55,19 @@ def compute_transition_log_prob(x, x_new, neural_drift, log_r_grad, sigma, step_
     
     log_importance_weight = log_p_transition_fwd - log_p_transition_bwd
     
-    return log_p_transition_fwd, log_p_transition_bwd, log_importance_weight
+    return log_p_transition_fwd, log_importance_weight
 
 
-def one_step_langevin_dynamic(neural_drift, x, time, log_reward, step_size, sigma, do_correct=False):
-    log_r_old, r_grad_old = get_reward_and_gradient(x, log_reward)
+def one_step_langevin_dynamic(neural_drift, x, time, log_reward, step_size, sigma, reinforce=False):
+    r_grad_old = get_gradient(x, log_reward)
     drift_value = neural_drift(x, time)
     
     x_new = langevin_proposal(drift_value, x, r_grad_old, step_size, sigma) # Next states
     
-    # if trick_mode == "reinforce":
-    #     x.detach()
-    #     x_new = x_new.detach()
+    if reinforce:
+        x.detach()
+        x_new = x_new.detach()
     
-    log_p_transition_fwd, log_p_transition_bwd, log_importance_weight = compute_transition_log_prob(x, x_new, drift_value, r_grad_old, sigma, step_size) # Compute transition log prob
+    log_p_transition_fwd, log_importance_weight = compute_transition_log_prob(x, x_new, drift_value, r_grad_old, sigma, step_size) # Compute transition log prob
 
-    return x_new, log_p_transition_fwd, log_p_transition_bwd, log_importance_weight
+    return x_new, log_p_transition_fwd, log_importance_weight
